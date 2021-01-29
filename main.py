@@ -80,14 +80,6 @@ ws3 = wb.create_sheet(title='technologies')
 
 ws1.title = 'succeed'
 
-# c = ws1["A2"]
-# ws1.freeze_panes = c
-# c = ws2["A2"]
-# ws2.freeze_panes = c
-# c = ws3["A2"]
-# ws3.freeze_panes = c
-
-
 ws1.append(['组织名', 'GSoc页面链接', '分类', 'idea列表', '技术栈', '相关主题'])
 for i, oneOrganization in enumerate(GSocOrganizationsInfoList):
     ws1.append([oneOrganization['title'],
