@@ -1,3 +1,5 @@
+from concurrent.futures.thread import ThreadPoolExecutor
+
 import requests
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
@@ -6,17 +8,22 @@ from tqdm import tqdm
 from func import toStr
 
 proxies = {
-    'http': 'http://127.0.0.1:10676',
-    'https': 'http://127.0.0.1:10676',
+    'http': 'http://localhost:11000',
+    'https': 'http://localhost:11000',
 }
+
+headers = {
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/88.0.4324.96 Safari/537.36 Edg/88.0.705.56'}
 
 proxySession = requests.session()
 proxySession.proxies = proxies
+proxySession.headers = headers
 
 baseURL = 'https://summerofcode.withgoogle.com'
 targetURL = baseURL + "/archive/2020/organizations/"
 
-GSocMainPage = proxySession.get(targetURL).content
+GSocMainPage = proxySession.get(targetURL, timeout=3).content
 
 GSocMainBS = BeautifulSoup(GSocMainPage, 'lxml')
 
@@ -30,9 +37,9 @@ GSocOrganizationsInfoList = []
 CrawlerErrorList = []
 AllTechnology = set()
 
-for mainPageOneOrganizationBS in tqdm(GSocOrganizationsBS.find_all('li')):
 
-    oneOrganizationURL = baseURL + mainPageOneOrganizationBS.a['href']
+def infoGet(oneOrganizationBS):
+    oneOrganizationURL = baseURL + oneOrganizationBS.a['href']
     oneOrganizationPage = proxySession.get(oneOrganizationURL).content
     oneOrganizationBS = BeautifulSoup(oneOrganizationPage, 'lxml')
 
@@ -47,7 +54,7 @@ for mainPageOneOrganizationBS in tqdm(GSocOrganizationsBS.find_all('li')):
             'title': title,
             'url': oneOrganizationURL
         })
-        continue
+        return
     idealistURL = metasBS.find(class_='org__button-container').find('md-button')['href']
     technologyList = []
     for oneTechnologyBS in metasBS.find_all(class_='organization__tag--technology'):
@@ -69,9 +76,16 @@ for mainPageOneOrganizationBS in tqdm(GSocOrganizationsBS.find_all('li')):
         'technologyList': toStr(technologyList),
         'topicsList': toStr(topicsList)
     })
-    # break
 
-# print(GSocOrganizationsInfoList)
+
+threadPool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="test_")
+
+for mainPageOneOrganizationBS in tqdm(GSocOrganizationsBS.find_all('li')):
+    threadPool.submit(infoGet, mainPageOneOrganizationBS)
+
+    # break
+threadPool.shutdown(wait=True)
+
 
 wb = Workbook()
 ws1 = wb.active
